@@ -282,7 +282,7 @@
     W = document.documentElement.clientWidth;
     H = document.body.scrollHeight;
     S = Math.max(0.4, Math.min(1, W / 800));
-    R = Math.ceil(135 * S);  // half the canvas: legs, scanner squares and glow fit inside
+    R = Math.ceil(125 * S);  // half the canvas: legs and glow fit inside
     dpr = Math.min(window.devicePixelRatio || 1, 2);
     canvas.width = canvas.height = 2 * R * dpr;
     canvas.style.width = canvas.style.height = 2 * R + 'px';
@@ -433,14 +433,7 @@
     ctx.strokeStyle = COLOR; ctx.fillStyle = COLOR;
     ctx.shadowColor = COLOR; ctx.shadowBlur = 10 * S;
 
-    // Scanner squares
-    const t = now / 1000;
-    ctx.globalAlpha = 0.55; ctx.lineWidth = 1.2;
-    for (let i = 0; i < 3; i++) {
-      const r = (34 + i * 16) * S, a = t * (0.6 + i * 0.35) * (i % 2 ? -1 : 1);
-      ctx.save(); ctx.translate(sp.x, sp.y); ctx.rotate(a);
-      ctx.strokeRect(-r, -r, r * 2, r * 2); ctx.restore();
-    }
+    const t = now / 1000;  // no scanner squares around the spider here, unlike spider/index.html
 
     // Line to the cursor, the cursor square and click pings (SVG, so they can reach anywhere on the page)
     if (mouse) {
