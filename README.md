@@ -1,7 +1,9 @@
 <p align="center">
-  <a href="https://superhivemarket.com/products/crawlers">
-    <img src="assets/key_art/01_crawlers.jpg" alt="Crawlers: lifelike creature swarms for Blender. 7 creatures, 11 skins, Geometry Nodes" width="100%">
+  <a href="https://youtu.be/T4sI0QxJfns">
+    <img src="assets/key_art/00_crawlers_video.jpg" alt="Watch the Crawlers 1.2 video on YouTube: lifelike creature swarms for Blender" width="100%">
   </a>
+  <br>
+  <a href="https://youtu.be/T4sI0QxJfns">▶ Watch the Crawlers 1.2 video (3:03)</a>
 </p>
 
 # Crawlers
