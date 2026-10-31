@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crawlers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  /* Embedded in the Superhive description with an iframe. Every size is in rem and 1rem is 2% of the
+     page width, so the whole page scales with the iframe and its height stays a fixed multiple of its width. */
+  :root { --bg: #0c0907; --card: #17110d; --line: #3a2a1e; --text: #efe6da; --muted: #bfae98; --accent: #f07a2a; }
+  html { font-size: 2vw; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, Arial, Helvetica, sans-serif; font-size: 1rem; line-height: 1.55; }
+  img { display: block; width: 100%; height: auto; }
+  a { color: var(--accent); }
+  .art { margin: 0; }
+  .section { padding: 2.2rem 2rem 0; }
+  .eyebrow { margin: 0 0 0.4rem; color: var(--accent); font-size: 0.72rem; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase; }
+  h2 { margin: 0 0 0.6rem; font-family: "Cormorant Garamond", Georgia, serif; font-weight: 600; font-size: 2.1rem; line-height: 1.1; letter-spacing: 0.04em; }
+  p { margin: 0 0 1rem; color: var(--muted); }
+  .clip { margin: 0 0 1rem; border: 1px solid var(--line); border-radius: 0.6rem; overflow: hidden; background: var(--card); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0 0 1rem; }
+  .grid .clip { margin: 0; }
+  .cap { padding: 0.55rem 0.8rem 0.65rem; font-size: 0.82rem; line-height: 1.45; color: var(--muted); }
+  .cap b { color: var(--text); }
+  .note { font-size: 0.72rem; color: #8d7d6a; }
+  .foot { padding: 1.4rem 2rem 2.2rem; text-align: center; }
+  .button { display: inline-block; padding: 0.7rem 1.4rem; border: 1px solid var(--accent); border-radius: 0.6rem; color: var(--accent); font-weight: 600; text-decoration: none; letter-spacing: 0.04em; }
+  .small { margin-top: 0.9rem; font-size: 0.72rem; color: #8d7d6a; }
+</style>
+</head>
+<body>
+
+<figure class="art"><img src="assets/key_art/01_crawlers.jpg" alt="Crawlers: lifelike creature swarms for Blender. 7 creatures, 11 skins, Geometry Nodes"></figure>
+
+<div class="section">
+  <p class="eyebrow">Rebuilt from photographs</p>
+  <h2>Real size. Real behaviour.</h2>
+  <p>Fur, spines and jointed legs, matched to reference photographs. Insects walk on planted feet, worms crawl along their own track and pile up.</p>
+  <div class="grid">
+    <div class="clip"><img src="assets/crawlers_cockroaches.gif" alt="American cockroaches running over leaf litter"><div class="cap"><b>Cockroaches</b> · 3.5 cm. Spiny legs, glossy wings, a tripod gait.</div></div>
+    <div class="clip"><img src="assets/crawlers_spiders.gif" alt="Furred wolf spiders on the forest floor"><div class="cap"><b>Wolf spiders</b> · 1.8 cm. Furred, they wait in ambush, then dash.</div></div>
+    <div class="clip"><img src="assets/crawlers_ants.gif" alt="A file of ants following a trail"><div class="cap"><b>Ants</b> · 1.2 cm. Fine hairs, an iridescent gaster, single file.</div></div>
+    <div class="clip"><img src="assets/crawlers_worms.gif" alt="Earthworms crawling over each other around a red berry"><div class="cap"><b>Earthworms</b> · 18 cm. Wet and ringed, piling into writhing heaps.</div></div>
+  </div>
+</div>
+
+<figure class="art"><img src="assets/key_art/02_now_with_snakes.jpg" alt="Now with snakes: slithering in S-curves, brown and banded skins"></figure>
+<div class="section">
+  <div class="clip"><img src="assets/crawlers_snakes.gif" alt="Three brown snakes slithering side by side in S-curves"></div>
+  <p>90 cm snakes glide in wide S-curves with the body on the head's track, flick their forked tongues and never pass through each other. Brown Snake and Banded Snake skins.</p>
+</div>
+
+<figure class="art"><img src="assets/key_art/03_they_climb.jpg" alt="They climb over anything: logs, rocks, walls, each other"></figure>
+<div class="section">
+  <div class="clip"><img src="assets/crawlers_banded_log.gif" alt="Two banded snakes slither up and over a mossy log"></div>
+  <p>Every creature walks up and over the logs, rocks and walls in its way, overhangs included, and steps down the far side.</p>
+</div>
+
+<figure class="art"><img src="assets/key_art/05_creature_catalog.jpg" alt="The Creature Catalog: pick them by their picture, add one kind or several together"></figure>
+<div class="section">
+  <div class="clip"><img src="assets/crawlers_catalog.gif" alt="Picking cockroaches, wolf spiders and ants in the Creature Catalog, clicking Add Together and pressing Play"></div>
+  <p>Click <b>+</b> on a card to add one kind, or pick several cards and click <b>Add Together</b>: one swarm per kind, all heading for one shared target.</p>
+</div>
+
+<figure class="art"><img src="assets/key_art/04_draw_their_path.jpg" alt="Draw their path: drag over your scene, the swarm walks your stroke"></figure>
+<div class="section">
+  <div class="clip"><img src="assets/crawlers_draw_path.gif" alt="Drawing a loop over the ground with the mouse; the ants walk it round and round"></div>
+  <p>Click <b>Draw Path</b> and drag over anything in your scene. End the stroke near the start and they walk it round and round.</p>
+</div>
+
+<div class="section">
+  <p class="eyebrow">Lure with Mouse</p>
+  <h2>Lead them with your cursor</h2>
+  <div class="clip"><img src="assets/crawlers_lure.gif" alt="Earthworms following the mouse cursor and piling up where it stops"></div>
+  <p>The worms follow your cursor and pile up where it stops. Hold the left mouse button to blast them apart.</p>
+  <p class="note">Creature loops are EEVEE renders. Viewport loops (Catalog, Draw Path, Lure) were recorded frame by frame, partly at double speed; live speed depends on the creature count and your hardware.</p>
+</div>
+
+<div class="foot">
+  <a class="button" href="https://github.com/voydeprocedural/crawlers" target="_blank" rel="noopener">Crawlers on GitHub</a>
+  <div class="small">Blender 5.0+ · GPL-3.0-or-later · © 2026 Voyde Procedural</div>
+</div>
+
+</body>
+</html>
