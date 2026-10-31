@@ -33,8 +33,17 @@
   .features h3 { margin: 0 0 0.4rem; font-size: 1.15rem; font-weight: 600; }
   .features p { font-size: 0.95rem; }
 
-  /* the live spider (its own page, embedded) */
-  .live iframe { display: block; width: 100%; height: 24rem; border: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  /* The page fills the whole iframe: when it is shorter, the gaps grow evenly instead of leaving space at the end. */
+  body { position: relative; display: flex; flex-direction: column; min-height: 100vh; }
+  body > * { flex: none; }
+  body > .gap, body > .gap-s { flex-grow: 1; }
+  .hint { margin: 0; color: var(--dim); font-size: 0.8rem; letter-spacing: 0.04em; }
+  .hint b { color: var(--ember); font-weight: 600; }
+
+  /* the spider that walks over the whole page (after the BlenderProcedural superhive-spider) */
+  #spider { position: absolute; left: 0; top: 0; z-index: 10; pointer-events: none; will-change: transform; }
+  #spider-fx { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 9; pointer-events: none; overflow: visible; }
+  .bands { position: absolute; left: 0; top: 0; width: 1px; height: 100%; pointer-events: none; visibility: hidden; }
 
   /* wide picture with a label over it */
   .wide { position: relative; }
@@ -92,9 +101,8 @@
   <div><h3>One modifier</h3><p>Pure Geometry Nodes: one simulation zone, every mode a modifier input.</p></div>
 </div>
 
-<div class="gap"></div>
-<div class="pad"><p class="eyebrow">Move your cursor here</p></div>
-<div class="live"><iframe src="https://blenderprocedural.github.io/superhive-spider/?bg=0a0705&amp;color=f07a2a" title="A spider that follows your cursor" loading="lazy"></iframe></div>
+<div class="gap-s"></div>
+<div class="pad"><p class="hint"><b>A spider is loose on this page.</b> Move your cursor and it follows you.</p></div>
 
 <div class="gap"></div>
 <div class="wide fade-top">
@@ -250,6 +258,255 @@
 </div>
 
 <div class="foot">© 2026 Voyde Procedural</div>
+
+<div class="bands" id="bands"></div>
+<svg id="spider-fx" aria-hidden="true"><line id="sp-line" stroke-dasharray="4 6" stroke-width="1.2" opacity="0.5"/><rect id="sp-cursor" fill="none" stroke-width="1.2" opacity="0.5"/><g id="sp-pings" fill="none" stroke-width="1.5"></g></svg>
+<canvas id="spider" aria-hidden="true"></canvas>
+
+<script>
+// A spider that walks over the whole page and follows the cursor. Gait and drawing come from the
+// BlenderProcedural superhive-spider page; here it lives in page coordinates, its canvas travels with it,
+// and while the cursor is away it wanders in the part of the page the viewer can see.
+(() => {
+  const COLOR = '#f07a2a';
+  const canvas = document.getElementById('spider'), ctx = canvas.getContext('2d');
+  const line = document.getElementById('sp-line'), cursor = document.getElementById('sp-cursor');
+  const pingLayer = document.getElementById('sp-pings');
+  for (const el of [line, cursor]) el.setAttribute('stroke', COLOR);
+  pingLayer.setAttribute('stroke', COLOR);
+
+  let W = 0, H = 0, S = 1, R = 100, dpr = 1;
+  function resize() {
+    W = document.documentElement.clientWidth;
+    H = document.body.scrollHeight;
+    S = Math.max(0.4, Math.min(1, W / 800));
+    R = Math.ceil(135 * S);  // half the canvas: legs, scanner squares and glow fit inside
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = canvas.height = 2 * R * dpr;
+    canvas.style.width = canvas.style.height = 2 * R + 'px';
+    buildBands();
+  }
+
+  // Which part of the page is on screen: bands watched with IntersectionObserver (works across the iframe).
+  const visible = new Map();
+  let observer = null;
+  function buildBands() {
+    const box = document.getElementById('bands');
+    if (observer) observer.disconnect();
+    box.innerHTML = ''; visible.clear();
+    observer = new IntersectionObserver(entries => {
+      for (const e of entries) {
+        if (e.isIntersecting) visible.set(e.target, [e.target.offsetTop, e.target.offsetTop + e.target.offsetHeight]);
+        else visible.delete(e.target);
+      }
+    }, {threshold: [0, 0.5, 1]});
+    for (let y = 0; y < H; y += 150) {
+      const b = document.createElement('div');
+      b.style.cssText = `position:absolute;left:0;top:${y}px;width:1px;height:${Math.min(150, H - y)}px`;
+      box.appendChild(b); observer.observe(b);
+    }
+  }
+  function seen() {
+    if (!visible.size) return [0, Math.min(H, 900)];
+    let a = Infinity, b = -Infinity;
+    for (const [t, u] of visible.values()) { a = Math.min(a, t); b = Math.max(b, u); }
+    return [a, b];
+  }
+
+  const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
+
+  const sp = { x: 0, y: 0, a: Math.random() * Math.PI * 2, v: 0 };
+  let target = { x: 0, y: 0 }, mouse = null, idleUntil = 0;
+
+  const LEG_DEF = [
+    { ang: 38, reach: 66, a: 40, b: 46 },
+    { ang: 78, reach: 58, a: 36, b: 40 },
+    { ang: 112, reach: 58, a: 36, b: 40 },
+    { ang: 148, reach: 70, a: 42, b: 48 },
+  ];
+  const legs = [];
+  for (const side of [-1, 1]) {
+    LEG_DEF.forEach((d, i) => legs.push({ side, i, ...d, group: (i + (side > 0 ? 1 : 0)) % 2,
+                                         fx: 0, fy: 0, sx: 0, sy: 0, tx: 0, ty: 0, t: 1 }));
+  }
+  function restFoot(leg, lead) {
+    const a = sp.a + leg.side * leg.ang * Math.PI / 180;
+    return [sp.x + Math.cos(a) * leg.reach * S + Math.cos(sp.a) * lead,
+            sp.y + Math.sin(a) * leg.reach * S + Math.sin(sp.a) * lead];
+  }
+  function hip(leg) {
+    const a = sp.a + leg.side * (leg.ang * 0.6 + 20) * Math.PI / 180;
+    return [sp.x + Math.cos(a) * 9 * S, sp.y + Math.sin(a) * 9 * S];
+  }
+  function plantFeet() { legs.forEach(l => { [l.fx, l.fy] = restFoot(l, 0); l.t = 1; }); }
+
+  function pickTarget() {
+    const [a, b] = seen(), m = 70 * S;
+    target = { x: m + Math.random() * Math.max(1, W - 2 * m),
+               y: a + m + Math.random() * Math.max(1, b - a - 2 * m) };
+  }
+
+  window.addEventListener('pointermove', e => { mouse = { x: e.pageX, y: e.pageY }; });
+  document.documentElement.addEventListener('pointerleave', () => { mouse = null; pickTarget(); });
+  window.addEventListener('pointerdown', e => {
+    const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    pingLayer.appendChild(r);
+    pings.push({ x: e.pageX, y: e.pageY, t: 0, el: r });
+  });
+  const pings = [];
+
+  let placed = false;
+  function update(dt, now) {
+    if (!placed) {
+      const [a, b] = seen();
+      sp.x = W * (0.25 + Math.random() * 0.5); sp.y = a + Math.min(b - a, 900) * 0.5;
+      plantFeet(); pickTarget(); placed = true;
+    }
+    // Off screen and the viewer has moved on: come in from the nearest edge of what they see.
+    const [a, b] = seen();
+    if (!mouse && (sp.y < a - 300 * S || sp.y > b + 300 * S)) {
+      sp.y = sp.y < a ? a - 120 * S : b + 120 * S;
+      sp.x = 70 * S + Math.random() * Math.max(1, W - 140 * S);
+      plantFeet(); pickTarget();
+    }
+    const goal = mouse || target;
+    const d = dist(sp.x, sp.y, goal.x, goal.y);
+    const stopR = mouse ? 55 * S : 20 * S;
+    let want = 0;
+    if (now > idleUntil && d > stopR) {
+      const turn = angDiff(sp.a, Math.atan2(goal.y - sp.y, goal.x - sp.x));
+      sp.a += Math.max(-1, Math.min(1, turn)) * dt * 3.2;
+      want = (mouse ? 150 : 85) * S * Math.max(0.25, Math.cos(turn) * 0.5 + 0.5);
+    } else if (!mouse && d <= stopR) {
+      idleUntil = now + 400 + Math.random() * 1600;
+      pickTarget();
+    }
+    sp.v = lerp(sp.v, want, Math.min(1, dt * 5));
+    sp.x = Math.max(20 * S, Math.min(W - 20 * S, sp.x + Math.cos(sp.a) * sp.v * dt));
+    sp.y = Math.max(20 * S, Math.min(H - 20 * S, sp.y + Math.sin(sp.a) * sp.v * dt));
+
+    // Legs: alternating tetrapod gait
+    const lead = sp.v * 0.18;
+    const stepDur = Math.max(0.07, 0.16 - sp.v / (2200 * S));
+    const stepping = [0, 0];
+    legs.forEach(l => { if (l.t < 1) stepping[l.group]++; });
+    for (const l of legs) {
+      if (l.t < 1) {
+        l.t = Math.min(1, l.t + dt / stepDur);
+        const e = l.t * l.t * (3 - 2 * l.t);
+        l.fx = lerp(l.sx, l.tx, e); l.fy = lerp(l.sy, l.ty, e);
+        continue;
+      }
+      const [rx, ry] = restFoot(l, lead);
+      if (dist(l.fx, l.fy, rx, ry) > 24 * S && stepping[1 - l.group] === 0) {
+        l.sx = l.fx; l.sy = l.fy; l.tx = rx; l.ty = ry; l.t = 0;
+        stepping[l.group]++;
+      }
+    }
+  }
+
+  function legPoints(l) {
+    const [hx, hy] = hip(l);
+    const A = l.a * S, B = l.b * S;
+    let dx = l.fx - hx, dy = l.fy - hy;
+    let d = Math.hypot(dx, dy);
+    const maxD = (A + B) * 0.995;
+    if (d > maxD) { dx *= maxD / d; dy *= maxD / d; d = maxD; }
+    const base = Math.atan2(dy, dx);
+    const k = Math.acos(Math.max(-1, Math.min(1, (A * A + d * d - B * B) / (2 * A * d || 1))));
+    const ka = base - l.side * k;
+    const lift = l.t < 1 ? Math.sin(l.t * Math.PI) * 10 * S : 0;
+    return [hx, hy, hx + Math.cos(ka) * A, hy + Math.sin(ka) * A - lift * 0.6, hx + dx, hy + dy - lift];
+  }
+
+  function draw(now) {
+    // The canvas sits on the spider; drawing stays in page coordinates.
+    const ox = Math.round(sp.x - R), oy = Math.round(sp.y - R);
+    canvas.style.transform = `translate(${ox}px, ${oy}px)`;
+    ctx.setTransform(dpr, 0, 0, dpr, -ox * dpr, -oy * dpr);
+    ctx.clearRect(ox, oy, 2 * R, 2 * R);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = COLOR; ctx.fillStyle = COLOR;
+    ctx.shadowColor = COLOR; ctx.shadowBlur = 10 * S;
+
+    // Scanner squares
+    const t = now / 1000;
+    ctx.globalAlpha = 0.55; ctx.lineWidth = 1.2;
+    for (let i = 0; i < 3; i++) {
+      const r = (34 + i * 16) * S, a = t * (0.6 + i * 0.35) * (i % 2 ? -1 : 1);
+      ctx.save(); ctx.translate(sp.x, sp.y); ctx.rotate(a);
+      ctx.strokeRect(-r, -r, r * 2, r * 2); ctx.restore();
+    }
+
+    // Line to the cursor, the cursor square and click pings (SVG, so they can reach anywhere on the page)
+    if (mouse) {
+      line.setAttribute('x1', sp.x); line.setAttribute('y1', sp.y);
+      line.setAttribute('x2', mouse.x); line.setAttribute('y2', mouse.y);
+      cursor.setAttribute('x', mouse.x - 9 * S); cursor.setAttribute('y', mouse.y - 9 * S);
+      cursor.setAttribute('width', 18 * S); cursor.setAttribute('height', 18 * S);
+      line.style.display = cursor.style.display = '';
+    } else {
+      line.style.display = cursor.style.display = 'none';
+    }
+    for (let i = pings.length - 1; i >= 0; i--) {
+      const p = pings[i]; p.t += 0.016;
+      if (p.t > 1) { p.el.remove(); pings.splice(i, 1); continue; }
+      const r = 6 * S + p.t * 40 * S;
+      p.el.setAttribute('x', p.x - r); p.el.setAttribute('y', p.y - r);
+      p.el.setAttribute('width', 2 * r); p.el.setAttribute('height', 2 * r);
+      p.el.setAttribute('opacity', 1 - p.t);
+    }
+
+    // Legs
+    ctx.globalAlpha = 1;
+    for (const l of legs) {
+      const [hx, hy, kx, ky, fx, fy] = legPoints(l);
+      ctx.lineWidth = 2.6 * S;
+      ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.stroke();
+      ctx.lineWidth = 1.6 * S;
+      ctx.beginPath(); ctx.moveTo(kx, ky); ctx.lineTo(fx, fy); ctx.stroke();
+      ctx.beginPath(); ctx.arc(kx, ky, 1.8 * S, 0, Math.PI * 2); ctx.fill();
+    }
+
+    // Body
+    ctx.save(); ctx.translate(sp.x, sp.y); ctx.rotate(sp.a);
+    const bob = Math.sin(t * 14) * (sp.v > 5 ? 0.8 : 0) * S;
+    ctx.lineWidth = 1.8 * S;
+    ctx.beginPath(); ctx.ellipse(-24 * S, bob, 20 * S, 15 * S, 0, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.18; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+    ctx.lineWidth = 1 * S; ctx.globalAlpha = 0.7;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath(); ctx.ellipse(-24 * S, bob, Math.abs(i) * 4.5 * S + 1, 15 * S, 0, -Math.PI / 2, Math.PI / 2, i < 0);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1; ctx.lineWidth = 1.8 * S;
+    ctx.beginPath(); ctx.ellipse(2 * S, 0, 12 * S, 10 * S, 0, 0, Math.PI * 2);
+    ctx.globalAlpha = 0.25; ctx.fill(); ctx.globalAlpha = 1; ctx.stroke();
+    ctx.lineWidth = 1.6 * S;
+    for (const s of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(12 * S, s * 3.5 * S); ctx.quadraticCurveTo(19 * S, s * 5 * S, 18 * S, s * 1 * S); ctx.stroke();
+    }
+    ctx.shadowBlur = 14 * S; ctx.fillStyle = '#fff';
+    for (const [ex, ey] of [[9, -3.5], [9, 3.5], [6.5, -6], [6.5, 6]]) {
+      ctx.beginPath(); ctx.arc(ex * S, ey * S, 1.4 * S, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  window.addEventListener('resize', () => { const w = W; resize(); if (w !== W) placed = false; });
+  window.addEventListener('load', resize);
+  resize();
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (W && H) { update(dt, now); draw(now); }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
 
 </body>
 </html>
